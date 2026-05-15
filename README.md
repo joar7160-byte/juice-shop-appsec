@@ -157,8 +157,5 @@ This project established baseline coverage. The natural extensions:
 ## Lessons Learned
 
 - **Tool selection should match the platform.** I initially attempted Docker Desktop on Windows for the target environment. After significant time spent debugging AMD virtualization and Hyper-V conflicts, I pivoted to an Azure Ubuntu VM. Cloud-hosted lab environments are often the faster path for security tooling that targets Linux.
-- **Semgrep OSS vs. paid tiers.** Semgrep's free OSS tier ran 1,059 community rules. The paid Semgrep Code tier would add ~1,700 proprietary rules with reduced false-positive rates, which I would evaluate for a production rollout.
-- **Cyber range NSG patterns.** The Azure cyber range used a permissive inbound + strict outbound NSG pattern — appropriate for a vulnerable-target lab because it contains any compromise to the VM rather than allowing it to be weaponized against external targets. This is a legitimate defense-in-depth design choice for security training environments.
 - **DAST scans are only as good as their crawl.** My initial ZAP scan completed in 5 minutes with sparse findings because the AJAX Spider didn't fully crawl Juice Shop's Angular routes. Real DAST against single-page applications requires more crawler configuration than a typical multi-page site.
 
-## Repository Contents

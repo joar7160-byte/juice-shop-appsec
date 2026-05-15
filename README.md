@@ -181,8 +181,6 @@ Tuning false positives is a real part of the AppSec job. A scanner that cries wo
 
 ## What I'd Build Next
 
-This is the baseline. Logical extensions:
-
 - **CI/CD integration.** Run Semgrep on every PR, gate merges on new High/Critical findings, upload SARIF to GitHub's Security tab.
 - **Custom Semgrep rules.** Write rules for project-specific patterns the community ruleset misses (like Juice Shop's exact Sequelize injection signature).
 - **Authenticated DAST.** Configure ZAP with valid session cookies so the active scan reaches authenticated endpoints. My unauthenticated run only hit public routes.

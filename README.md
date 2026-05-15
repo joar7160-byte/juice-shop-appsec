@@ -158,4 +158,3 @@ This project established baseline coverage. The natural extensions:
 
 - **Tool selection should match the platform.** I initially attempted Docker Desktop on Windows for the target environment. After significant time spent debugging AMD virtualization and Hyper-V conflicts, I pivoted to an Azure Ubuntu VM. Cloud-hosted lab environments are often the faster path for security tooling that targets Linux.
 - **DAST scans are only as good as their crawl.** My initial ZAP scan completed in 5 minutes with sparse findings because the AJAX Spider didn't fully crawl Juice Shop's Angular routes. Real DAST against single-page applications requires more crawler configuration than a typical multi-page site.
-

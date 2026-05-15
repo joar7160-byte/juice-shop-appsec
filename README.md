@@ -24,17 +24,25 @@ Juice Shop ran on the Azure VM at port 3000. ZAP ran on a Windows host and attac
 
 **SAST first.** I ran Semgrep against the Juice Shop source with `--config=auto`, which automatically selects rulesets based on detected languages (TypeScript, JavaScript, YAML, HTML, Solidity, JSON, Dockerfile, Bash). 1,113 files were scanned in ~40 seconds, producing 42 findings.
 
+![Semgrep Scan Summary](Screenshots/SAST/01_Scan%20results.PNG)
+
 **SCA in parallel.** `npm audit` against `package.json` surfaced 42 vulnerabilities in transitive dependencies (4 low, 9 moderate, 23 high, 6 critical). This catches vulnerabilities introduced through third-party code that SAST against first-party code cannot.
 
 **DAST last.** With Juice Shop running, I pointed OWASP ZAP's Automated Scan at `http://VM:3000`. ZAP ran traditional spider, AJAX spider, and Active Scan modules to find runtime vulnerabilities that only manifest when the application is executing.
 
 **Why this order:** SAST finds the most issues fastest and informs what to look for at runtime. SCA is essentially free once dependencies are installed. DAST is the slowest but catches issues neither SAST nor SCA can see, like server configuration and authentication flow problems.
 
+## Findings Breakdown
+
+Categorized counts across all 42 Semgrep findings:
+
+![Findings Breakdown](Screenshots/SAST/02_Findings%20breakdown.PNG)
+
 ## Key Findings
 
 ### 1. SQL Injection — Critical (SAST)
 
-**Location:** `routes/login.ts:34`
+**Location:** `routes/login.ts:34`  
 **Rule:** `javascript.sequelize.security.audit.sequelize-injection-express`
 
 User-controlled input (`req.body.email`) is concatenated directly into a raw SQL query via template literals:
@@ -54,7 +62,7 @@ models.sequelize.query(
 
 **Fix:** Use Sequelize's parameterized query syntax (`replacements` or `bind`) instead of string interpolation.
 
-![SQL Injection Finding](screenshots/sast/03_sql_injection.png)
+![SQL Injection Finding](Screenshots/SAST/03_SQL%20injection%20code.PNG)
 
 ### 2. Path Traversal — High (SAST + DAST correlation)
 
@@ -69,12 +77,13 @@ models.sequelize.query(
 
 **Why critical:** `path.resolve` does not block `../` traversal — it just resolves the path. A request like `?file=../../etc/passwd` would resolve outside the intended directory. The `keyServer.ts` instance is particularly severe because it serves encryption keys; a successful traversal there could expose cryptographic material used elsewhere in the app.
 
+![Path Traversal Findings](Screenshots/SAST/04_path%20transverals.PNG)
+
 **DAST correlation:** ZAP's spider independently discovered URLs like `http://VM:3000/home/labuser/juice-shop/node_modules/serve-index/...`, confirming at runtime that the server exposes paths outside its intended directories. The SAST static analysis and DAST runtime behavior agreed on the same class of vulnerability — this is exactly the kind of cross-tool corroboration mature AppSec programs aim for.
 
-**Fix:** Validate that `path.resolve(file)` begins with the allowed directory; reject otherwise.
+![DAST Path Disclosure](Screenshots/DAST/05_ZAP_Path%20Transversal.PNG)
 
-![Path Traversal Findings](screenshots/sast/04_path_traversal.png)
-![DAST Path Disclosure](screenshots/dast/11_zap_path_traversal.png)
+**Fix:** Validate that `path.resolve(file)` begins with the allowed directory; reject otherwise.
 
 ### 3. GitHub Actions Shell Injection — High (SAST)
 
@@ -91,7 +100,7 @@ models.sequelize.query(
 
 The same anti-pattern across three workflow files suggests no security review process on CI/CD changes — itself a finding worth raising.
 
-![GitHub Actions Shell Injection](screenshots/sast/05_github_actions.png)
+![GitHub Actions Shell Injection](Screenshots/SAST/05_github%20actions.PNG)
 
 ### 4. Hardcoded Secrets — Medium (SAST)
 
@@ -104,7 +113,7 @@ Two categories of secret exposure:
 
 **Fix:** Load all secrets from environment variables or a secret manager. Use clearly fake placeholders (`PLACEHOLDER_DO_NOT_USE`) in fixtures.
 
-![Hardcoded Secrets](screenshots/sast/06_hardcoded_secrets.png)
+![Hardcoded Secrets](Screenshots/SAST/06_hardcode.PNG)
 
 ### 5. Dependency Vulnerabilities — Mixed (SCA)
 
@@ -114,9 +123,14 @@ These represent supply-chain risk independent of how Juice Shop's own code is wr
 
 In a real environment, the next step would be triaging which of these are reachable from the application's actual call paths — many dependency CVEs are in code paths the application never exercises. Tools like Snyk or Semgrep Supply Chain perform this reachability analysis.
 
-![npm audit](screenshots/sca/07_npm_audit.png)
+![npm audit](Screenshots/SCA/SCA%20npm%20audit.PNG)
 
 ### 6. CSP Misconfiguration & Header Issues — Medium (DAST)
+
+The DAST setup ran Juice Shop on the Azure VM and pointed ZAP at it from the Windows host:
+
+![Juice Shop Running on VM](Screenshots/DAST/01_juice%20shop%20run.PNG)
+![Juice Shop in Browser](Screenshots/DAST/02_OwsapJuice.PNG)
 
 ZAP's automated scan produced 5 distinct alerts, the most significant being:
 
@@ -127,7 +141,8 @@ ZAP's automated scan produced 5 distinct alerts, the most significant being:
 
 These are deployment- and configuration-layer issues that SAST cannot detect because they only exist at runtime. This is exactly why DAST complements SAST rather than replacing it.
 
-![ZAP CSP Alert](screenshots/dast/10_zap_alerts.png)
+![ZAP Alerts](Screenshots/DAST/03_ZAP_ALERTS.PNG)
+![ZAP Discovered URLs](Screenshots/DAST/04_sites.PNG)
 
 ## SAST/DAST Correlation
 
